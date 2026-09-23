@@ -1,0 +1,7 @@
+node_modules
+out
+.venv
+analysis/stems
+analysis/*.wav
+__pycache__
+.DS_Store

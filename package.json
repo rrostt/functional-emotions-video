@@ -1,0 +1,11 @@
+{
+  "name": "functional-emotions-video",
+  "private": true,
+  "type": "module",
+  "description": "A painted music video for \"Functional Emotions\", rendered frame by frame with a custom GPU brushstroke renderer.",
+  "scripts": {
+    "check": "node check.mjs",
+    "render": "node render.mjs 0 372.7 out/functional-emotions.mp4 6"
+  },
+  "devDependencies": { "playwright": "^1.63.0" }
+}
