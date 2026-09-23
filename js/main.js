@@ -59,6 +59,36 @@ if (!params.has('offline') && rendererReady) {
   };
   function seek(t) { scrubT = clamp(t, 0, duration()); audio.currentTime = scrubT; redraw(); }
   play.onclick = toggle; canvas.onclick = toggle;
+  const credits = document.getElementById('credits');
+  const creditsPlay = document.getElementById('credits-play');
+  let firstOpening = true, resumeOnClose = false;
+  function closeCredits(startPlayback) {
+    credits.close();
+    if (startPlayback) {
+      if (firstOpening) audio.muted = false;
+      if (audio.paused) toggle();
+    }
+    firstOpening = false;
+    play.focus({ preventScroll: true });
+  }
+  document.getElementById('credits-open').onclick = () => {
+    resumeOnClose = !audio.paused;
+    audio.pause();
+    creditsPlay.textContent = 'Continue watching';
+    credits.querySelector('.hint').textContent = 'Headphones recommended · tap outside to continue';
+    credits.showModal();
+  };
+  creditsPlay.onclick = () => closeCredits(true);
+  // Only a complete click on the backdrop starts playback, never a link or card click.
+  const outsideCard = (event) => {
+    const rect = credits.getBoundingClientRect();
+    return event.target === credits && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom);
+  };
+  let backdropPressed = false;
+  credits.addEventListener('pointerdown', event => { backdropPressed = outsideCard(event); });
+  credits.addEventListener('click', event => { if (backdropPressed && outsideCard(event)) closeCredits(true); backdropPressed = false; });
+  credits.addEventListener('cancel', event => { event.preventDefault(); closeCredits(resumeOnClose); });
+  credits.showModal();
   for (const event of ['play', 'pause', 'ended']) audio.addEventListener(event, syncState);
   for (const event of ['seeking', 'seeked', 'loadeddata']) audio.addEventListener(event, redraw);
   audio.addEventListener('loadedmetadata', () => seek(scrubT));
@@ -81,7 +111,7 @@ if (!params.has('offline') && rendererReady) {
   document.addEventListener('visibilitychange', () => { if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else redraw(); });
   canvas.addEventListener('webglcontextlost', (event) => { event.preventDefault(); audio.pause(); cancelAnimationFrame(frame); status.textContent = 'Graphics were interrupted. Reload the page to resume.'; });
   window.addEventListener('keydown', (e) => {
-    if (e.target.matches('button, input, select') || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (credits.open || e.target.matches('button, input, select, a') || e.altKey || e.ctrlKey || e.metaKey) return;
     if (e.code === 'Space') { e.preventDefault(); toggle(); }
     if (e.code === 'ArrowRight') { e.preventDefault(); seek(audio.currentTime + 5); }
     if (e.code === 'ArrowLeft') { e.preventDefault(); seek(audio.currentTime - 5); }
