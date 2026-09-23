@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Functional Emotions</title>
+<link rel="icon" href="data:,">
 
 
 <style>
@@ -14,22 +15,35 @@
   #ui { position: fixed; left: 0; right: 0; bottom: 0; padding: 18px 16px calc(16px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 14px;
         background: linear-gradient(transparent, rgba(0,0,0,.7)); opacity: 0; transition: opacity .5s; }
   body.awake #ui, body:not(.playing) #ui { opacity: 1; }
+  #ui:focus-within { opacity: 1; }
+  button, select { color: var(--fg); background: #17151a; border: 1px solid #716a60; border-radius: 5px; padding: 8px; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--ember); outline-offset: 4px; }
   #play { all: unset; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(242,233,214,.5); display: grid; place-items: center; flex: none; }
   #play::before { content: ""; border-left: 12px solid var(--fg); border-top: 7px solid transparent; border-bottom: 7px solid transparent; margin-left: 3px; }
   body.playing #play::before { border: none; width: 10px; height: 14px; margin: 0; background: linear-gradient(90deg, var(--fg) 35%, transparent 35% 65%, var(--fg) 65%); }
-  #bar { flex: 1; height: 22px; display: flex; align-items: center; cursor: pointer; touch-action: none; }
-  #bar > div { width: 100%; height: 2px; background: rgba(242,233,214,.2); position: relative; }
-  #fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ember); }
+  #bar { flex: 1; min-width: 40px; height: 22px; cursor: pointer; accent-color: var(--ember); }
   #time { font-size: 12px; letter-spacing: .08em; opacity: .7; flex: none; font-variant-numeric: tabular-nums; }
   #start { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; transition: opacity .8s; }
   #start span { font: italic 22px Georgia, serif; letter-spacing: .02em; opacity: .85; margin-top: 46vh; }
   body.playing #start { opacity: 0; }
+  #status { position: fixed; top: 20px; left: 20px; right: 20px; text-align: center; font-size: 14px; }
+  #status:not(:empty) { padding: 12px; background: #070608dd; }
+  @media (max-width: 600px) { #ui { flex-wrap: wrap; gap: 8px; } #time { font-size: 10px; } #quality { max-width: 90px; } }
 </style>
 </head>
 <body>
-<canvas id="c"></canvas>
+<canvas id="c" aria-label="Functional Emotions animated music video"></canvas>
 <div id="start"><span>tap to play — headphones</span></div>
-<div id="ui"><button id="play" aria-label="Play / pause"></button><div id="bar"><div><div id="fill"></div></div></div><span id="time">0:00</span></div>
+<div id="status" role="status" aria-live="polite"></div>
+<div id="ui">
+  <button id="play" aria-label="Play"></button>
+  <input id="bar" type="range" min="0" max="372.7" step="0.1" value="0" aria-label="Seek">
+  <span id="time">0:00 / 6:12</span>
+  <button id="mute" aria-label="Mute">Sound on</button>
+  <select id="quality" aria-label="Animation resolution"><option value="720">720p</option><option value="1080">1080p</option><option value="540">540p</option></select>
+  <button id="fullscreen" aria-label="Enter fullscreen">Fullscreen</button>
+</div>
+<noscript>This animated music video needs JavaScript enabled.</noscript>
 <audio id="a" src="assets/functional-emotions.mp3" preload="auto"></audio>
 <script src="js/data.js"></script>
 <script src="js/paint.js"></script>

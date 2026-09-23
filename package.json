@@ -4,6 +4,9 @@
   "type": "module",
   "description": "A painted music video for \"Functional Emotions\", rendered frame by frame with a custom GPU brushstroke renderer.",
   "scripts": {
+    "build": "node build.mjs",
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
     "check": "node check.mjs",
     "render": "node render.mjs 0 372.7 out/functional-emotions.mp4 6"
   },

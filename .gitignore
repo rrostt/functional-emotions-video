@@ -5,3 +5,6 @@ analysis/stems
 analysis/*.wav
 __pycache__
 .DS_Store
+.playwright-cli/
+output/playwright/
+dist/

@@ -19,26 +19,74 @@ function renderFrame(t) {
 }
 
 const canvas = document.getElementById('c'); canvas.width = W; canvas.height = H;
-Paint.init(canvas);
 const params = new URLSearchParams(location.search);
+let rendererReady = false;
+try { Paint.init(canvas); rendererReady = true; }
+catch (error) { document.getElementById('status').textContent = error.message; }
 window.__frameJPEG = (t, q = .93) => { renderFrame(t); return canvas.toDataURL('image/jpeg', q); };
-window.__ready = Promise.resolve(true);
+window.__ready = rendererReady ? Promise.resolve(true) : Promise.reject(new Error('Renderer unavailable'));
+window.__ready.catch(() => {});
 
-if (!params.has('offline')) {
+if (!params.has('offline') && rendererReady) {
   const audio = document.getElementById('a');
-  const bar = document.getElementById('bar'), fillEl = document.getElementById('fill'), tl = document.getElementById('time'), play = document.getElementById('play');
-  let scrubT = params.has('t') ? parseFloat(params.get('t')) : 0; audio.currentTime = scrubT;
+  const bar = document.getElementById('bar'), tl = document.getElementById('time'), play = document.getElementById('play');
+  const status = document.getElementById('status'), mute = document.getElementById('mute');
+  const quality = document.getElementById('quality'), fullscreen = document.getElementById('fullscreen');
+  const initial = Number(params.get('t'));
+  let scrubT = Number.isFinite(initial) ? clamp(initial, 0, DUR) : 0;
+  let frame = 0;
+  const duration = () => Number.isFinite(audio.duration) ? audio.duration : DUR;
   const fmt = (x) => `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, '0')}`;
-  (function loop() { const t = audio.paused ? (audio.currentTime || scrubT) : audio.currentTime; renderFrame(Math.min(t, DUR - .01)); fillEl.style.width = (t / DUR * 100) + '%'; tl.textContent = `${fmt(t)} / ${fmt(DUR)}`; requestAnimationFrame(loop); })();
-  const toggle = () => { if (audio.paused) { audio.play(); document.body.classList.add('playing'); } else { audio.pause(); document.body.classList.remove('playing'); } };
-  play.onclick = toggle; canvas.onclick = toggle; audio.onended = () => document.body.classList.remove('playing');
-  const seek = (e) => { const r = bar.getBoundingClientRect(); audio.currentTime = scrubT = clamp((e.clientX - r.left) / r.width) * DUR; };
-  bar.addEventListener('pointerdown', (e) => { seek(e); const mv = (ev) => seek(ev); window.addEventListener('pointermove', mv); window.addEventListener('pointerup', () => window.removeEventListener('pointermove', mv), { once: true }); });
+  function draw() {
+    frame = 0;
+    const t = audio.readyState ? audio.currentTime : scrubT;
+    renderFrame(Math.min(t, DUR - .01));
+    bar.max = duration(); bar.value = t;
+    bar.setAttribute('aria-valuetext', `${fmt(t)} of ${fmt(duration())}`);
+    tl.textContent = `${fmt(t)} / ${fmt(duration())}`;
+    if (!audio.paused && !audio.ended && !document.hidden) frame = requestAnimationFrame(draw);
+  }
+  function redraw() { if (!frame && !document.hidden) frame = requestAnimationFrame(draw); }
+  function syncState() {
+    document.body.classList.toggle('playing', !audio.paused && !audio.ended);
+    play.setAttribute('aria-label', audio.paused ? 'Play' : 'Pause');
+    redraw();
+  }
+  const toggle = async () => {
+    if (!audio.paused) { audio.pause(); return; }
+    try { status.textContent = ''; if (audio.ended) audio.currentTime = 0; await audio.play(); }
+    catch { status.textContent = 'Unable to play the soundtrack. Check that the audio file is available, then press Play to retry.'; syncState(); }
+  };
+  function seek(t) { scrubT = clamp(t, 0, duration()); audio.currentTime = scrubT; redraw(); }
+  play.onclick = toggle; canvas.onclick = toggle;
+  for (const event of ['play', 'pause', 'ended']) audio.addEventListener(event, syncState);
+  for (const event of ['seeking', 'seeked', 'loadeddata']) audio.addEventListener(event, redraw);
+  audio.addEventListener('loadedmetadata', () => seek(scrubT));
+  if (audio.readyState >= 1) seek(scrubT);
+  audio.addEventListener('waiting', () => { status.textContent = 'Loading music…'; });
+  audio.addEventListener('playing', () => { status.textContent = ''; });
+  audio.addEventListener('canplay', () => { status.textContent = ''; });
+  audio.addEventListener('error', () => { status.textContent = 'The soundtrack could not be loaded. Check assets/functional-emotions.mp3 and reload.'; });
+  bar.addEventListener('input', () => seek(Number(bar.value)));
+  mute.onclick = () => { audio.muted = !audio.muted; };
+  audio.addEventListener('volumechange', () => { mute.textContent = audio.muted ? 'Sound off' : 'Sound on'; mute.setAttribute('aria-label', audio.muted ? 'Unmute' : 'Mute'); });
+  quality.onchange = () => { canvas.height = Number(quality.value); canvas.width = canvas.height * 16 / 9; redraw(); };
+  quality.onchange();
+  async function toggleFullscreen() {
+    try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); }
+    catch { status.textContent = 'Fullscreen is unavailable in this browser.'; }
+  }
+  fullscreen.onclick = toggleFullscreen;
+  document.addEventListener('fullscreenchange', () => { fullscreen.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen'; fullscreen.setAttribute('aria-label', fullscreen.textContent); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else redraw(); });
+  canvas.addEventListener('webglcontextlost', (event) => { event.preventDefault(); audio.pause(); cancelAnimationFrame(frame); status.textContent = 'Graphics were interrupted. Reload the page to resume.'; });
   window.addEventListener('keydown', (e) => {
+    if (e.target.matches('button, input, select') || e.altKey || e.ctrlKey || e.metaKey) return;
     if (e.code === 'Space') { e.preventDefault(); toggle(); }
-    if (e.code === 'ArrowRight') audio.currentTime = scrubT = Math.min(DUR, audio.currentTime + 5);
-    if (e.code === 'ArrowLeft') audio.currentTime = scrubT = Math.max(0, audio.currentTime - 5);
-    if (e.code === 'KeyF') (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen());
+    if (e.code === 'ArrowRight') { e.preventDefault(); seek(audio.currentTime + 5); }
+    if (e.code === 'ArrowLeft') { e.preventDefault(); seek(audio.currentTime - 5); }
+    if (e.code === 'KeyF') toggleFullscreen();
+    if (e.code === 'KeyM') mute.click();
   });
   let idle; const wake = () => { document.body.classList.add('awake'); clearTimeout(idle); idle = setTimeout(() => document.body.classList.remove('awake'), 2200); };
   window.addEventListener('pointermove', wake); window.addEventListener('touchstart', wake); wake();

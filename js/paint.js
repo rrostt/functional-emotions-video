@@ -102,6 +102,7 @@ const Paint = (() => {
 
   function init(canvas) {
     gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true, antialias: false, premultipliedAlpha: false });
+    if (!gl) throw new Error('This animation needs WebGL 2. Enable hardware acceleration or try another browser.');
     progStroke = prog(VS_STROKE, FS_STROKE); progQuad = prog(VS_QUAD, FS_UNDER); progFinish = prog(VS_QUAD, FS_FINISH);
     texSrc = tex(); texFx = tex(); texFxb = tex();
     // quad
@@ -136,7 +137,7 @@ const Paint = (() => {
     const boilRate = o.boil ?? 8;
     bctx.globalCompositeOperation = 'copy'; bctx.filter = 'blur(5px)'; bctx.drawImage(fx, 0, 0, fxb.width, fxb.height); bctx.filter = 'none';
     upload(texSrc, src); upload(texFx, fx); upload(texFxb, fxb);
-    gl.viewport(0, 0, W, H); gl.disable(gl.DEPTH_TEST);
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight); gl.disable(gl.DEPTH_TEST);
     // underpainting
     gl.disable(gl.BLEND); gl.useProgram(progQuad); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texSrc);
     gl.uniform1i(gl.getUniformLocation(progQuad, 'uSrc'), 0); gl.bindVertexArray(quadVao); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

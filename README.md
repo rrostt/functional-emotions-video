@@ -46,11 +46,35 @@ Every frame is a pure function of song time `t`, so it plays live in the browser
 
 ## Running it
 
-You need Node.js, Google Chrome and ffmpeg.
+To watch the realtime animation, you only need Node.js and a browser with WebGL 2 (hardware acceleration enabled).
+
+```bash
+npm start
+```
+
+Open **http://localhost:3000**, then click the picture or Play to start the music. Every frame is drawn live from the soundtrack's current playback time, so seeking and dropped frames stay synchronized. No MP4 generation or ffmpeg is needed to watch it.
+
+The player includes a seek slider, mute, fullscreen, and 540p/720p/1080p resolution settings (720p by default). Keyboard shortcuts: Space to play/pause, ←/→ to seek five seconds, M to mute, F for fullscreen. Pausing stops rendering; background tabs stop drawing and catch up to the music when reopened. Use `?t=120` to open at a particular song time.
+
+The page is also a static website: serve `index.html`, `js/`, and `assets/` together on any static web host. Audio starts after a user gesture to comply with browser autoplay restrictions. For another local port, use `PORT=8080 npm start`.
+
+### Deploy with Cloudflare Pages
+
+Connect your GitHub fork in Cloudflare **Workers & Pages → Create application → Pages → Connect to Git**. Set:
+
+- Production branch: `main`
+- Framework preset: `None`
+- Build command: `npm run build`
+- Build output directory: `dist`
+
+The build copies only the public player, animation scripts, and soundtrack. Pushes to `main` automatically update the shared site. You can verify the same build locally with `npm run build`.
+
+### Offline rendering
+
+To export an MP4 or contact sheet, you additionally need Google Chrome, ffmpeg, and the development dependencies:
 
 ```bash
 npm install
-open index.html                                   # watch it live (space = play, ←/→ = seek, f = fullscreen)
 node check.mjs out/sheet.jpg 30 101.5 218.3       # contact sheet of any times
 node render.mjs 0 372.7 out/video.mp4 6           # full 1080p render, 6 parallel pages
 ```
