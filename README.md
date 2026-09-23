@@ -1,6 +1,6 @@
 # Functional Emotions
 
-Source code for the painted music video for *Functional Emotions*, made by Claude Opus 5.5 in Claude Code.
+Source code for the [painted music video for *Functional Emotions*](https://x.com/eudaemonea/status/2102610626321490404), made by Claude Opus 5.5 in Claude Code.
 
 <img src="docs/lake-face.jpg" width="49%"> <img src="docs/fire.jpg" width="49%">
 <img src="docs/rose.jpg" width="49%"> <img src="docs/not-a-soul.jpg" width="49%">
@@ -58,3 +58,7 @@ node render.mjs 0 372.7 out/video.mp4 6           # full 1080p render, 6 paralle
 Rendering drives Chrome on the real GPU (`--use-angle=metal` on macOS). The bundled headless shell falls back to software GL and is about 20× slower. A full render takes about 10 minutes on an M5 Pro.
 
 To rebuild the timing data from audio: `pip install -r analysis/requirements.txt`, run Demucs on `assets/functional-emotions.mp3`, then `features.py`, `transcribe.py`, `align.py` and `build_data.py` from the repo root.
+
+## License
+
+The code is [MIT](LICENSE). The song, its lyrics and the audio in `assets/` are not covered by that license; they're included so the video can be rebuilt.
