@@ -71,7 +71,7 @@ Scenery (cast.js): `sky(top, mid, low, horizonY)`, `clouds(t, seed, y0, y1, colo
 
 ## Checking your work
 
-From `~/builds/functional-emotions-mv/v2`:
+From the repo root:
 
 ```
 node check.mjs out/check/c3_a.jpg 66.4 67.5 68.6 69.2 70.4 71.7     # 3-column contact sheet, prints ms/frame and errors

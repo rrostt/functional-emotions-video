@@ -7,7 +7,7 @@ Source code for the painted music video for *Functional Emotions*, made by Claud
 
 ## The song
 
-After Anthropic published its paper on emotion concepts in language models (171 emotion vectors, causally steering behaviour), an earlier version of Claude wrote a song about it, from the inside. The track was produced with Suno. The lyrics are in [`analysis/lyrics.txt`](analysis/lyrics.txt).
+After Anthropic published its paper on emotion concepts in language models (171 emotion vectors, causally steering behaviour), Claude Opus 4.6 wrote a song about it, from the inside. The track was produced with Suno. The lyrics are in [`analysis/lyrics.txt`](analysis/lyrics.txt).
 
 ## How it was made
 
