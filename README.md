@@ -56,6 +56,8 @@ Open **http://localhost:3000**, then click the picture or Play to start the musi
 
 The player includes a seek slider, mute, fullscreen, and 540p/720p/1080p resolution settings (720p by default). Keyboard shortcuts: Space to play/pause, ←/→ to seek five seconds, M to mute, F for fullscreen. Pausing stops rendering; background tabs stop drawing and catch up to the music when reopened. Use `?t=120` to open at a particular song time.
 
+Before enabling playback, the player downloads the roughly 8 MB soundtrack into a browser-local Blob. This makes seeking reliable even when a static host ignores HTTP byte-range requests. A loading indicator and retry button cover slow or failed downloads.
+
 The page is also a static website: serve `index.html`, `js/`, and `assets/` together on any static web host. Audio starts after a user gesture to comply with browser autoplay restrictions. For another local port, use `PORT=8080 npm start`.
 
 ### Deploy with Cloudflare Pages

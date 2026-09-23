@@ -35,13 +35,15 @@ if (!params.has('offline') && rendererReady) {
   const initial = Number(params.get('t'));
   let scrubT = Number.isFinite(initial) ? clamp(initial, 0, DUR) : 0;
   let frame = 0;
+  let soundtrackReady = false, soundtrackLoading = false;
+  let scrubbing = false;
   const duration = () => Number.isFinite(audio.duration) ? audio.duration : DUR;
   const fmt = (x) => `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, '0')}`;
   function draw() {
     frame = 0;
     const t = audio.readyState ? audio.currentTime : scrubT;
     renderFrame(Math.min(t, DUR - .01));
-    bar.max = duration(); bar.value = t;
+    bar.max = duration(); if (!scrubbing) bar.value = t;
     bar.setAttribute('aria-valuetext', `${fmt(t)} of ${fmt(duration())}`);
     tl.textContent = `${fmt(t)} / ${fmt(duration())}`;
     if (!audio.paused && !audio.ended && !document.hidden) frame = requestAnimationFrame(draw);
@@ -53,16 +55,18 @@ if (!params.has('offline') && rendererReady) {
     redraw();
   }
   const toggle = async () => {
+    if (!soundtrackReady) { if (!soundtrackLoading) loadSoundtrack(); return; }
     if (!audio.paused) { audio.pause(); return; }
     try { status.textContent = ''; if (audio.ended) audio.currentTime = 0; await audio.play(); }
     catch { status.textContent = 'Unable to play the soundtrack. Check that the audio file is available, then press Play to retry.'; syncState(); }
   };
-  function seek(t) { scrubT = clamp(t, 0, duration()); audio.currentTime = scrubT; redraw(); }
+  function seek(t) { scrubT = clamp(t, 0, duration()); if (soundtrackReady) audio.currentTime = scrubT; redraw(); }
   play.onclick = toggle; canvas.onclick = toggle;
   const credits = document.getElementById('credits');
   const creditsPlay = document.getElementById('credits-play');
   let firstOpening = true, resumeOnClose = false;
   function closeCredits(startPlayback) {
+    if (startPlayback && !soundtrackReady) { if (!soundtrackLoading) loadSoundtrack(); return; }
     credits.close();
     if (startPlayback) {
       if (firstOpening) audio.muted = false;
@@ -89,15 +93,56 @@ if (!params.has('offline') && rendererReady) {
   credits.addEventListener('click', event => { if (backdropPressed && outsideCard(event)) closeCredits(true); backdropPressed = false; });
   credits.addEventListener('cancel', event => { event.preventDefault(); closeCredits(resumeOnClose); });
   credits.showModal();
+  // Some static hosts ignore Range requests and reset remote MP3 seeks to zero.
+  // A complete local Blob makes every position seekable, even on a cold visit.
+  async function loadSoundtrack() {
+    soundtrackLoading = true;
+    play.disabled = bar.disabled = creditsPlay.disabled = true;
+    creditsPlay.textContent = 'Loading music…';
+    status.textContent = 'Loading music…';
+    let objectURL;
+    try {
+      const response = await fetch(audio.dataset.src);
+      if (!response.ok) throw new Error(`Soundtrack HTTP ${response.status}`);
+      const blob = await response.blob();
+      objectURL = URL.createObjectURL(blob);
+      await new Promise((resolve, reject) => {
+        const cleanup = () => { audio.removeEventListener('loadedmetadata', loaded); audio.removeEventListener('error', failed); };
+        const loaded = () => { cleanup(); resolve(); };
+        const failed = () => { cleanup(); reject(new Error('Cannot decode soundtrack')); };
+        audio.addEventListener('loadedmetadata', loaded);
+        audio.addEventListener('error', failed);
+        audio.src = objectURL;
+        audio.load();
+      });
+      soundtrackReady = true;
+      seek(scrubT);
+      status.textContent = '';
+      creditsPlay.textContent = 'Play with sound';
+      play.disabled = bar.disabled = false;
+    } catch (error) {
+      if (objectURL) URL.revokeObjectURL(objectURL);
+      status.textContent = 'The music could not be loaded. Check your connection and retry.';
+      creditsPlay.textContent = 'Retry loading music';
+      play.disabled = false;
+      console.error(error);
+    } finally {
+      soundtrackLoading = false;
+      creditsPlay.disabled = false;
+    }
+  }
+  loadSoundtrack();
   for (const event of ['play', 'pause', 'ended']) audio.addEventListener(event, syncState);
   for (const event of ['seeking', 'seeked', 'loadeddata']) audio.addEventListener(event, redraw);
-  audio.addEventListener('loadedmetadata', () => seek(scrubT));
-  if (audio.readyState >= 1) seek(scrubT);
   audio.addEventListener('waiting', () => { status.textContent = 'Loading music…'; });
   audio.addEventListener('playing', () => { status.textContent = ''; });
   audio.addEventListener('canplay', () => { status.textContent = ''; });
   audio.addEventListener('error', () => { status.textContent = 'The soundtrack could not be loaded. Check assets/functional-emotions.mp3 and reload.'; });
   bar.addEventListener('input', () => seek(Number(bar.value)));
+  bar.addEventListener('pointerdown', () => { scrubbing = true; });
+  const endScrub = () => { scrubbing = false; redraw(); };
+  window.addEventListener('pointerup', endScrub);
+  window.addEventListener('pointercancel', endScrub);
   mute.onclick = () => { audio.muted = !audio.muted; };
   audio.addEventListener('volumechange', () => { mute.textContent = audio.muted ? 'Sound off' : 'Sound on'; mute.setAttribute('aria-label', audio.muted ? 'Unmute' : 'Mute'); });
   quality.onchange = () => { canvas.height = Number(quality.value); canvas.width = canvas.height * 16 / 9; redraw(); };
